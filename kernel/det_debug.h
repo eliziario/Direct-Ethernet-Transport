@@ -48,12 +48,18 @@
 
 #define assert(p)		KERNEL_ASSERT(#p, p)
 #else	/* CONFIG_KERNEL_ASSERTS */
-#define assert(p)							\
+#define assert(p)
+/*
+For a moment I am not going to see with defines I need to
+have kgbd here. So I've commented the call to breakpoint
+--eliziario 30-jun
+ */
+							\
 do {									\
 	if (!(p)) {							\
 		printk(KERN_CRIT "Assertion at %s:%d assert(%s)\n",	\
 			__FILE__, __LINE__, #p);			\
-		BREAK();						\
+		//BREAK();						\
 	}								\
 } while (0)
 #endif	/* CONFIG_KERNEL_ASSERTS */

@@ -1,0 +1,109 @@
+#!/bin/sh
+#
+# Set module load parameters here.
+#
+# Note that module load parameters are *not* required when loading
+# the driver.  Parameters are provided here for reference.  The
+# driver will use built-in defaults for parameters that are not
+# specified.  Setting a parameter value to zero will also use the
+# built-in driver default for that parameter.  Use the modinfo(8)
+# command to display module parameter descriptions.
+#
+det_max_memory=0
+det_timer_period=0
+det_ack_timeout=0
+det_window_size=0
+
+
+# Set variables
+module=det
+device=det
+mode=666
+
+
+usage()
+{
+  echo "Usage: $0 {start|stop|restart|reload} [module_parameters]"
+}
+
+
+
+verify_root_privilege()
+{
+  if [ $UID != 0 ]; then
+    echo "You must be root to modify $module state"
+    exit 1
+  fi
+}
+
+
+
+start()
+{
+  verify_root_privilege
+
+  kernel_ver=$(uname -r)
+
+# Module parameters are *not* required when loading the driver - refer to comment above
+  /sbin/modprobe $module "det_max_memory=$det_max_memory" "det_timer_period=$det_timer_period" "det_ack_timeout=$det_ack_timeout" "det_window_size=$det_window_size" $@
+  if [ "$?" != "0" ]; then exit 1 ; fi
+
+# remove stale device
+  rm -f /dev/$device
+
+  major=`awk "\\$2==\"$module\" {print \\$1}" /proc/devices`
+  mknod /dev/$device c $major 0
+
+# Give appropriate group/permissions, and change the group.
+# Not all distributions have staff; some have "wheel" instead.
+  group="staff"
+  grep '^staff:' /etc/group > /dev/null || group="wheel"
+
+  chgrp $group /dev/$device
+  chmod $mode /dev/$device
+
+  return 0
+}
+
+
+
+stop()
+{
+  verify_root_privilege
+
+  /sbin/rmmod $module
+  rm -f /dev/$device
+
+  return 0
+}
+
+
+
+restart()
+{
+  stop
+  start $@
+}
+
+
+
+# "main"
+next_state=$1
+shift
+
+# See how we were called
+case "$next_state" in
+  start)
+    start $@
+    ;;
+  stop)
+    stop
+    ;;
+  restart|reload)
+    restart $@
+    ;;
+  *)
+    usage
+    exit 1
+esac
+

@@ -1,0 +1,238 @@
+---------------------------------------------------------------------------
+Intel(R) Direct Ethernet Transport (Intel(R) DET) Kernel Driver and
+User-mode Library v1.1
+Release Notes
+---------------------------------------------------------------------------
+
+--------
+Contents
+--------
+
+- Overview
+- Key Features
+- System Requirements
+- Installation Notes
+- Documentation
+- Technical Support
+- Disclaimer and Legal Information
+
+--------
+Overview
+--------
+
+This release provides a technology preview of the Intel(R) Direct Ethernet
+Transport (Intel(R) DET) Kernel Driver and User-mode Library.  Together, they
+provide an RDMA/IPC semantic over a commodity Ethernet device that emulates
+commercial RDMA technologies such as InfiniBand and iWARP.  As a result,
+Intel(R) DET enables those interested in cluster application development, or
+RDMA concepts in general, the opportunity to work with a faithful
+implementation without investing in any one particular RDMA technology.
+
+The user-mode library interface is unique to Intel(R) DET.  For
+standards-based RDMA/IPC programming to the DAPL 1.2 API, a DAPL provider
+for Intel(R) DET is also available through the Intel What If web site as a
+technology preview.
+
+Package Contents
+----------------
+The compressed TAR for this distribution contains the following files and
+directories:
+
+- ReleaseNotes.txt               # This file
+- LICENSE-DET-Driver.txt         # GPL 2.0 License for DET kernel driver
+- LICENSE-DET-Library.txt        # LGPL 2.0 License for DET user-mode library
+- det-1.1.0.tar.gz               # Source tree for DET driver and library
+- examples/*                     # Example programs
+
+------------
+Key Features
+------------
+
+This release of Intel(R) DET supports the following major features:
+- Asynchronous Queue Pair (QP) and Completion Queue (CQ) interfaces
+- Low latency layer two network protocol
+- Zero copy transmit and single copy receive from/to user-space memory
+- Coexistence with TCP/IP over the same Ethernet port
+
+-------------------
+System Requirements
+-------------------
+
+The following sections describe supported hardware and software.
+
+Supported Hardware
+------------------
+     IA-32 based systems:
+       A system based on a Pentium(R) 4 processor
+       Dual-Core Intel(R) Xeon(R) processor recommended
+       1 GB of RAM (4 GB of RAM recommended)
+       5 GB of free hard disk space
+
+     X86_64 based systems:
+       Intel(R) Xeon(R) processor
+       Intel(R) Core(TM) 2 processor family recommended
+       1 GB of RAM (4 GB of RAM recommended)
+       5 GB of free hard disk space
+
+     *** Intel(R) DET has not been tested on Itanium(R) 2 based systems ***
+
+Supported Software
+------------------
+- This source release requires Linux kernel release 2.6.9 or higher
+- Intel(R) DET has been built and tested on the following Linux distributions:
+     Red Hat* Enterprise Linux 4.0
+     Red Hat Enterprise Linux 5.0
+     SuSE* Linux Enterprise server 10.0
+
+------------------
+Installation Notes
+------------------
+
+The Intel(R) DET installation is supported through RPM Package Management
+found on most Linux distributions.  To build binary installation packages from
+the source distribution tarball, use the following procedure as root:
+
+[root]# rpmbuild -tb det-1.1.0.tar.gz
+
+This will generally build three packages, the location of which is Linux
+distribution and CPU architecture specific.  For example, on Red Hat x86_64,
+they are placed in /usr/src/redhat/RPMS/x86_64/.  Refer to the output from the
+rpmbuild(8) command to find the location on your system.  The packages of
+interest are:
+
+det-1.1.0-1.x86_64.rpm               # core driver and library installation
+det-devel-1.1.0-1.x86_64.rpm         # DET includes and man pages
+det-devel-static-1.1.0-1.x86_64.rpm  # static library (libdet.a)
+
+Each package is dependant on the installation of the preceding package in the
+list above.  You can use a wildcard to install all packages in the proper
+order.  The following is an example installation for Red Hat:
+
+[root]# rpm -i /usr/src/redhat/RPMS/x86_64/det-*.rpm
+
+A full installation includes the following files.  These are the typical path
+locations and may vary by Linux distribution.  (Note that the /usr/lib path
+will depend on CPU architecture: /usr/lib for IA32 and /usr/lib64 for x86_64.)
+
+/lib/module/[os dependent]/kernel/drivers/net/det/det.ko # core pkg
+/usr/lib[64]/libdet.so.1.0.1                   # core pkg
+/usr/lib[64]/libdet.so.1 -> libdet.so.1.0.1    # core pkg
+/usr/lib[64]/libdet.so -> libdet.so.1.0.1      # devel pkg
+/usr/lib[64]/libdet.a                          # devel-static pkg
+/usr/include/det/*.h                           # devel pkg
+/usr/share/man/man3/det_*.3.gz                 # devel pkg
+/etc/init.d/det                                # core pkg (start/stop script)
+
+Ethernet Controller Optimization
+--------------------------------
+Some Ethernet controllers have the ability to moderate the frequency of packet
+interrupts.  Instead of generating an interrupt for every received packet,
+they may delay the interrupt for a period of time to allow more packets to
+arrive and thus reduce overall interrupt overhead and CPU utilization.  Most
+Intel Ethernet controllers use this technique by default.
+
+In order to achieve the best possible latencies, such optimizations should be
+disabled.  The core installation package will automatically do this for Intel
+Ethernet controls installed on the target system by adding one or more of the
+following lines to /etc/modprobe.conf:
+
+options ixgb RxIntDelay=0,0,0,0 TxIntDelay=0,0,0,0 IntDelayEnable=0,0,0,0
+options ixgbe InterruptThrottleRate=0,0,0,0 RxBufferMode=0,0,0,0
+options e1000 InterruptThrottleRate=0,0,0,0 RxIntDelay=0,0,0,0 \
+              TxIntDelay=0,0,0,0  RxAbsIntDelay=0,0,0,0 TxAbsIntDelay=0,0,0,0
+
+The Ethernet driver(s) in question must be reloaded for the low latency
+configuration changes in /etc/modprobe.conf to take effect.  The core
+installation package DOES NOT reload Ethernet drivers.  As an alternative to
+rebooting the system, Ethernet drivers can generally be reloaded safely, even
+from a remote console, if all operations are performed on a single command
+line.  For example:
+
+[root]# rmmod e1000;modprobe e1000
+
+Consult the manufacture/driver documentation to determine the lowest latency
+configuration supported by the Ethernet controllers used in your system.
+
+Starting and Stopping the Intel(R) DET Driver
+---------------------------------------------
+The driver will be loaded and started after installation and all subsequent
+reboots.  It can be manually stopped, started, or restarted using the script:
+
+[root]# /etc/init.d/det [start][stop][restart]
+
+In most cases, automatic loading after reboot can be controlled by using the
+appropriate configuration tool for your Linux distribution such as
+chkconfig(8) or insserv(8)
+
+Uninstalling
+------------
+Use the following rpm(8) command to remove one or more DET installations:
+
+[root]# rpm -e det-1.1.0-1 det-devel-1.1.0-1 det-devel-static-1.1.0-1
+
+-------------
+Documentation
+-------------
+
+Manual pages for all Intel(R) DET library calls are supplied with development
+installation package.
+
+-----------------
+Technical Support
+-----------------
+
+As a pre-release distribution through Intel What If, feedback and discussion
+on Intel(R) DET is welcome and encouraged.  The What If site whatif.intel.com
+provides links to software engineering blogs and support forums for this
+purpose.
+
+--------------------------------
+Disclaimer and Legal Information
+--------------------------------
+
+INFORMATION IN THIS DOCUMENT IS PROVIDED IN CONNECTION WITH INTEL(R) PRODUCTS.
+NO LICENSE, EXPRESS OR IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL
+PROPERTY RIGHTS IS GRANTED BY THIS DOCUMENT. EXCEPT AS PROVIDED IN INTEL'S
+TERMS AND CONDITIONS OF SALE FOR SUCH PRODUCTS, INTEL ASSUMES NO LIABILITY
+WHATSOEVER, AND INTEL DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO
+SALE AND/OR USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING
+TO FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT OF ANY
+PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT.
+UNLESS OTHERWISE AGREED IN WRITING BY INTEL, THE INTEL PRODUCTS ARE NOT
+DESIGNED NOR INTENDED FOR ANY APPLICATION IN WHICH THE FAILURE OF THE INTEL
+PRODUCT COULD CREATE A SITUATION WHERE PERSONAL INJURY OR DEATH MAY OCCUR.
+Intel may make changes to specifications and product descriptions at any time,
+without notice. Designers must not rely on the absence or characteristics of
+any features or instructions marked "reserved" or "undefined." Intel reserves
+these for future definition and shall have no responsibility whatsoever for
+conflicts or incompatibilities arising from future changes to them. The
+information here is subject to change without notice. Do not finalize a design
+with this information. The products described in this document may contain
+design defects or errors known as errata which may cause the product to
+deviate from published specifications. Current characterized errata are
+available on request. Contact your local Intel sales office or your
+distributor to obtain the latest specifications and before placing your
+product order. Copies of documents which have an order number and are
+referenced in this document, or other Intel literature, may be obtained by
+calling 1-800-548-4725, or by visiting Intel's Web Site. 
+
+Intel processor numbers are not a measure of performance. Processor numbers
+differentiate features within each processor family, not across different
+processor families. See http://www.intel.com/products/processor_number for
+details.
+
+BunnyPeople, Celeron, Celeron Inside, Centrino, Centrino Atom, Centrino Atom
+Inside, Centrino Inside, Centrino logo, Core Inside, FlashFile, i960,
+InstantIP, Intel, Intel logo, Intel386, Intel486, IntelDX2, IntelDX4,
+IntelSX2, Intel Atom, Intel Atom Inside, Intel Core, Intel Inside, Intel
+Inside logo, Intel. Leap ahead., Intel. Leap ahead. logo, Intel NetBurst,
+Intel NetMerge, Intel NetStructure, Intel SingleDriver, Intel SpeedStep, Intel
+StrataFlash, Intel Viiv, Intel vPro, Intel XScale, Itanium, Itanium Inside,
+MCS, MMX, Oplus, OverDrive, PDCharm, Pentium, Pentium Inside, skoool, Sound
+Mark, The Journey Inside, Viiv Inside, vPro Inside, VTune, Xeon, and Xeon
+Inside are trademarks of Intel Corporation in the U.S. and other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+Copyright(C) 2007-2008, Intel Corporation. All rights reserved.
+

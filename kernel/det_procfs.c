@@ -1419,7 +1419,7 @@ int det_create_procfs(char * const alias)
 #endif
 	if (unlikely(!proc_net_det))
 		return -ENODEV;
-	proc_net_det->owner = THIS_MODULE;
+
 
 	/* Create a proto entry. */
 	entry = create_proc_read_entry("proto",
@@ -1428,8 +1428,6 @@ int det_create_procfs(char * const alias)
 					det_proto_read,
 					NULL);
 
-	if (likely(entry))
-		entry->owner = THIS_MODULE;
 
 	entry = create_proc_read_entry("dev",
 					S_IRUGO,
@@ -1437,8 +1435,6 @@ int det_create_procfs(char * const alias)
 					det_dev_read,
 					NULL);
 
-	if (likely(entry))
-		entry->owner = THIS_MODULE;
 
 #ifdef DET_PERF
 	/* Create performance counter entry */
@@ -1448,7 +1444,6 @@ int det_create_procfs(char * const alias)
 					det_perf_read,
 					NULL);
 	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
 		entry->write_proc = det_stats_write;
 	}
 #endif
@@ -1460,7 +1455,6 @@ int det_create_procfs(char * const alias)
 					det_perf_lock_read,
 					NULL);
 	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
 		entry->write_proc = det_stats_write;
 	}
 #endif
@@ -1472,7 +1466,6 @@ int det_create_procfs(char * const alias)
 					det_stats_read,
 					NULL);
 	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
 		entry->write_proc = det_stats_write;
 	}
 #endif
@@ -1482,9 +1475,6 @@ int det_create_procfs(char * const alias)
 					proc_net_det,
 					det_active_read,
 					NULL);
-	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
-	}
 
 	entry = create_proc_read_entry("lock_dump",
 					S_IRUGO,
@@ -1492,9 +1482,6 @@ int det_create_procfs(char * const alias)
 					det_lock_read,
 					NULL);
 
-	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
-	}
 
 	/* Tunable entry. */
 	entry = create_proc_read_entry("config",
@@ -1502,18 +1489,12 @@ int det_create_procfs(char * const alias)
 					proc_net_det,
 					det_config_read,
 					NULL);
-	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
-	}
 
 	entry = create_proc_read_entry("mr",
 					S_IRUGO | S_IWUGO,	/* S_IWUSR */
 					proc_net_det,
 					det_mr_read,
 					NULL);
-	if (likely(entry)) {
-		entry->owner = THIS_MODULE;
-	}
 
 	return 0;
 }
